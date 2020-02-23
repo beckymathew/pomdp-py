@@ -48,7 +48,7 @@ class MosObservationModel(pomdp_py.OOObservationModel):
             # return MosOOObservation({objid: ObjectObservationModel.NULL
             #                          for objid in next_state.object_states
             #                          if objid != next_state.object_states[objid].objclass != "robot"})
-            
+
         factored_observations = super().sample(next_state, action, argmax=argmax)
         return MosOOObservation.merge(factored_observations, next_state)
 
@@ -61,6 +61,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
         self._sensor = sensor
         self.sigma = sigma
         self.epsilon = epsilon
+        self._dim = dim
 
     def _compute_params(self, object_in_sensing_region):
         if object_in_sensing_region:
@@ -74,7 +75,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
             beta = (1.0 - self.epsilon) / 2.0
             gamma = self.epsilon
         return alpha, beta, gamma
-        
+
     def probability(self, observation, next_state, action, **kwargs):
         """
         Returns the probability of Pr (observation | next_state, action).
@@ -90,7 +91,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
                 return 1.0
             else:
                 return 0.0
-        
+
         if observation.objid != self._objid:
             raise ValueError("The observation is not about the same object")
 
@@ -100,7 +101,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
             assert next_robot_state["id"] == self._sensor.robot_id,\
                 "Robot id of observation model mismatch with given state"
             robot_pose = next_robot_state.pose
-            
+
             if isinstance(next_state, ObjectState):
                 assert next_state["id"] == self._objid,\
                     "Object id of observation model mismatch with given state"
@@ -121,19 +122,19 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
             if zi == ObjectObservation.NULL:
                 # Even though event A occurred, the observation is NULL.
                 # This has 0.0 probability.
-                return 0.0 * alpha
+                return 1e-9 * alpha
             else:
                 gaussian = pomdp_py.Gaussian(list(object_pose),
                                              [[self.sigma**2, 0],
                                               [0, self.sigma**2]])
                 return gaussian[zi] * alpha
         elif event_occured == "B":
-            return (1.0 / self._sensor.sensing_region_size) * beta
+            return (1.0 / 1000) * beta
 
         else: # event_occured == "C":
-            prob = 1.0 if zi == ObjectObservation.NULL else 0.0  # indicator zi == NULL
+            prob = 1.0 if zi == ObjectObservation.NULL else 1e-9  # indicator zi == NULL
             return prob * gamma
-            
+
 
     def sample(self, next_state, action, **kwargs):
         """Returns observation"""
@@ -144,7 +145,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
         robot_pose = next_state.pose(self._sensor.robot_id)
         object_pose = next_state.pose(self._objid)
 
-        # Obtain observation according to distribution. 
+        # Obtain observation according to distribution.
         alpha, beta, gamma = self._compute_params(self._sensor.within_range(robot_pose, object_pose))
 
         # Requires Python >= 3.6
@@ -155,7 +156,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
 
     def argmax(self, next_state, action, **kwargs):
         # Obtain observation according to distribution.
-        alpha, beta, gamma = self._compute_params(self._sensor.within_range(robot_pose, object_pose))        
+        alpha, beta, gamma = self._compute_params(self._sensor.within_range(robot_pose, object_pose))
 
         event_probs = {"A": alpha,
                        "B": beta,
@@ -175,10 +176,10 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
             else:
                 zi = gaussian.mpe()
             zi = (int(round(zi[0])), int(round(zi[1])))
-                
+
         elif event == "B":
-            zi = (random.randint(0, self._gridworld.width),   # x axis
-                  random.randint(0, self._gridworld.height))  # y axis
+            zi = (random.randint(0, self._dim[0]),   # x axis
+                  random.randint(0, self._dim[1]))  # y axis
         else: # event == C
             zi = ObjectObservation.NULL
         return zi
@@ -193,7 +194,7 @@ def unittest():
     # and the observation model probability and
     # sampling functions.
     worldmap =\
-        """ 
+        """
         ..........
         ....T.....
         ......x...
@@ -203,7 +204,7 @@ def unittest():
         ..........
         """
        #0123456789
-       # 10 x 8 
+       # 10 x 8
     worldstr = equip_sensors(worldmap,
                              {"r": make_laser_sensor(90, (1,5), 0.5, False)})
     env = interpret(worldstr)
@@ -214,10 +215,10 @@ def unittest():
     sensor = env.sensors[robot_id]
     assert sensor.within_range(robot_pose, (4,3)) == False
     assert sensor.within_range(robot_pose, (5,3)) == True
-    assert sensor.within_range(robot_pose, (6,3)) == True  
+    assert sensor.within_range(robot_pose, (6,3)) == True
     assert sensor.within_range(robot_pose, (7,2)) == True
     assert sensor.within_range(robot_pose, (7,3)) == True
-    assert sensor.within_range(robot_pose, (4,3)) == False 
+    assert sensor.within_range(robot_pose, (4,3)) == False
     assert sensor.within_range(robot_pose, (2,4)) == False
     assert sensor.within_range(robot_pose, (4,1)) == False
     assert sensor.within_range(robot_pose, (4,5)) == False

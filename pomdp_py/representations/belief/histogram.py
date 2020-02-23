@@ -56,7 +56,7 @@ def update_histogram_belief(current_histogram, real_action, real_observation,
                                                                 **targs) * current_histogram[state]
         else:
             transition_prob = current_histogram[next_state]
-            
+
         new_histogram[next_state] = observation_prob * transition_prob
         total_prob += new_histogram[next_state]
 

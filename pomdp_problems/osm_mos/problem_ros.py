@@ -9,9 +9,14 @@ from .agent.agent import *
 from .example_worlds import *
 from .domain.observation import *
 from .models.components.grid_map import *
+from .map_utils import *
 import argparse
 import time
 import random
+import ast
+import rospy
+from std_msgs.msg import String
+from geometry_msgs.msg import PoseStamped
 
 class MosOOPOMDP(pomdp_py.OOPOMDP):
     """
@@ -74,6 +79,9 @@ class MosOOPOMDP(pomdp_py.OOPOMDP):
                 for objid in env.target_objects:
                     groundtruth_pose = env.state.pose(objid)
                     prior[objid] = {groundtruth_pose: 1.0}
+                print("prior: ", prior)
+            # TODO: get prior from language -- file? ROS?
+            # TODO: match lang prior objids
 
         # Potential extension: a multi-agent POMDP. For now, the environment
         # can keep track of the states of multiple agents, but a POMDP is still
@@ -97,6 +105,48 @@ class MosOOPOMDP(pomdp_py.OOPOMDP):
         super().__init__(agent, env,
                          name="MOS(%d,%d,%d)" % (env.width, env.length, len(env.target_objects)))
 
+### ROS Setup ###
+pomdp_to_map_fp = "/home/becky/repo/spatial-lang/faunce_feb17_2obj/1_7_pomdp_cell_to_map_idx.json"
+idx_to_cell_fp = "/home/becky/repo/spatial-lang/faunce_feb17_2obj/idx_to_cell_faunce_feb17_2obj.json"
+
+drone_reached = False # This will tell us whether to send next action or not
+skydio_observation = MosOOObservation({})
+
+def skydiostring_callback(msg):
+    global drone_reached
+
+    if msg.data == "Waiting...":
+        drone_reached = True
+    else:
+        drone_reached = False
+
+def observation_callback(msg):
+    global skydio_observation
+
+    obs = msg.data
+
+    # Convert string to dictionary
+    obs_dict = ast.literal_eval(obs)
+    # print("obs_dict: ", obs_dict)
+    # Convert None to ObjectObservation.NULL
+    for key, value in obs_dict.items():
+        if value is None:
+            obs_dict[key] = ObjectObservation.NULL
+        else:
+            # convert lat/lon to pomdp grid coords
+            str_tuple = latlon_to_pomdp_cell(value[0], value[1], pomdp_to_map_fp, idx_to_cell_fp)
+            # print("str_tuple: ", str_tuple)
+            obs_dict[key] = tuple(reversed(ast.literal_eval(str_tuple)))
+    # print("after eval: ", obs_dict)
+
+    observation = MosOOObservation(obs_dict)
+    skydio_observation = observation
+
+rospy.init_node("spatial_lang")
+rospy.Subscriber("/skydiostring", String, skydiostring_callback)
+rospy.Subscriber("/observation", String, observation_callback)
+gpose_pub = rospy.Publisher("/gpose", PoseStamped, queue_size=10)
+rate = rospy.Rate(10)
 
 ### Belief Update ###
 def belief_update(agent, real_action, real_observation, next_robot_state, planner):
@@ -176,6 +226,8 @@ def solve(problem,
     Args:
         visualize (bool) if True, show the pygame visualization.
     """
+    global drone_reached
+    global skydio_observation
 
     random_objid = random.sample(problem.env.target_objects, 1)[0]
     random_object_belief = problem.agent.belief.object_beliefs[random_objid]
@@ -214,12 +266,29 @@ def solve(problem,
     _find_actions_count = 0
     _total_reward = 0  # total, undiscounted reward
     for i in range(max_steps):
+        print("==== Step %d ====" % (i+1))
         # Plan action
         _start = time.time()
         real_action = planner.plan(problem.agent)
         _time_used += time.time() - _start
         if _time_used > max_time:
             break  # no more time to update.
+        # TODO: Send action to Unity... in lat/lon!
+        robot_pose = problem.env.state.object_states[robot_id].pose
+        if real_action.name != "find":
+            action_pose = real_action.motion
+            next_coordinate = (robot_pose[0] + action_pose[0], robot_pose[1] + action_pose[1])
+            next_latlon = get_center_latlon(next_coordinate, pomdp_to_map_fp, idx_to_cell_fp)
+            print("next latlon: ", next_latlon)
+
+            # Publish lat/lon pair to Unity sim on /gpose
+            p = PoseStamped()
+            # formatting for Unity
+            p.pose.position.x = next_latlon[1]
+            p.pose.position.y = -1 * next_latlon[0]
+            p.pose.position.z = 0.0
+            gpose_pub.publish(p)
+            rospy.sleep(2)
 
         # Execute action
         reward = problem.env.state_transition(real_action, execute=True,
@@ -227,9 +296,23 @@ def solve(problem,
 
         # Receive observation
         _start = time.time()
-        real_observation = \
-            problem.env.provide_observation(problem.agent.observation_model, real_action)
+        while not drone_reached:
+            rospy.sleep(0.25)
 
+        if drone_reached:
+            real_observation = skydio_observation
+        if real_action.name == "find":
+        #     print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            real_observation = MosOOObservation({})
+
+        pomdp_observation = \
+            problem.env.provide_observation(problem.agent.observation_model, real_action)
+        print("actual obs: ", pomdp_observation)
+        print("skydio obs: ", real_observation)
+
+        # real_observation = skydio_observation
+        #
+        # import pdb; pdb.set_trace()
         # Updates
         problem.agent.clear_history()  # truncate history
         problem.agent.update_history(real_action, real_observation)
@@ -237,12 +320,12 @@ def solve(problem,
                       problem.env.state.object_states[robot_id],
                       planner)
         _time_used += time.time() - _start
+        # pdb.set_trace()
 
         # Info and render
         _total_reward += reward
         if isinstance(real_action, FindAction):
             _find_actions_count += 1
-        print("==== Step %d ====" % (i+1))
         print("Action: %s" % str(real_action))
         print("Observation: %s" % str(real_observation))
         print("Reward: %s" % str(reward))
@@ -284,7 +367,7 @@ def solve(problem,
 def unittest():
     # random world
     # grid_map, robot_char = random_world(20, 20, 5, 20)
-    grid_map, robot_char = dorrance_2obj_0_1
+    grid_map, robot_char = faunce_2obj_1_7
     laserstr = make_laser_sensor(90, (1, 5), 0.5, False)
     proxstr = make_proximity_sensor(5, False)
     problem = MosOOPOMDP(robot_char,  # r is the robot character
@@ -294,6 +377,7 @@ def unittest():
                          sensors={robot_char: proxstr},
                          prior="uniform",
                          agent_has_map=True)
+
     solve(problem,
           max_depth=10,
           discount_factor=0.99,

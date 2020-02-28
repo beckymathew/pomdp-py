@@ -245,6 +245,7 @@ def solve(problem,
         print("==== Step %d ====" % (i+1))
         print("Action: %s" % str(real_action))
         print("Observation: %s" % str(real_observation))
+        print("Robot pose: %s" % str(problem.env.state.object_states[robot_id]))
         print("Reward: %s" % str(reward))
         print("Reward (Cumulative): %s" % str(_total_reward))
         print("Find Actions Count: %d" %  _find_actions_count)
@@ -292,7 +293,7 @@ def unittest():
                          epsilon=1.0, # observation model parameter
                          grid_map=grid_map,
                          sensors={robot_char: proxstr},
-                         prior="uniform",
+                         prior="informed",
                          agent_has_map=True)
     solve(problem,
           max_depth=10,

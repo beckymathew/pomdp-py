@@ -1,7 +1,7 @@
 """
 Defines the Action for the 2D Multi-Object Search domain;
 
-Action space: 
+Action space:
 
     Motion :math:`\cup` Look :math:`\cup` Find
 
@@ -54,10 +54,10 @@ class MotionAction(Action):
     SOUTH = (0, 1, math.pi/2)
 
     # allow the agent to take larger steps
-    EAST_BIG = (5, 0, 0)  # x is horizontal; x+ is right. y is vertical; y+ is down.
-    WEST_BIG = (-5, 0, math.pi)
-    NORTH_BIG = (0, -5, 3*math.pi/2)
-    SOUTH_BIG = (0, 5, math.pi/2)
+    # EAST_BIG = (5, 0, 0)  # x is horizontal; x+ is right. y is vertical; y+ is down.
+    # WEST_BIG = (-5, 0, math.pi)
+    # NORTH_BIG = (0, -5, 3*math.pi/2)
+    # SOUTH_BIG = (0, 5, math.pi/2)
 
     # scheme 2 (vt, vw) translational, rotational velocities.
     FORWARD = (1, 0)
@@ -78,36 +78,34 @@ class MotionAction(Action):
 
         if scheme == "xy":
             if motion not in {MotionAction.EAST, MotionAction.WEST,
-                              MotionAction.NORTH, MotionAction.SOUTH,
-                              MotionAction.EAST_BIG, MotionAction.WEST_BIG,
-                              MotionAction.NORTH_BIG, MotionAction.SOUTH_BIG}:
+                              MotionAction.NORTH, MotionAction.SOUTH}:
                 raise ValueError("Invalid move motion %s" % motion)
         else:
             if motion not in {MotionAction.FORWARD, MotionAction.BACKWARD,
                               MotionAction.LEFT, MotionAction.RIGHT}:
                 raise ValueError("Invalid move motion %s" % motion)
-            
+
         self.motion = motion
         self.scheme = scheme
         self.distance_cost = distance_cost
         if motion_name is None:
             motion_name = str(motion)
         super().__init__("move-%s-%s" % (scheme, motion_name))
-        
+
 # Define some constant actions
 MoveEast = MotionAction(MotionAction.EAST, scheme="xy", motion_name="East")
 MoveWest = MotionAction(MotionAction.WEST, scheme="xy", motion_name="West")
 MoveNorth = MotionAction(MotionAction.NORTH, scheme="xy", motion_name="North")
 MoveSouth = MotionAction(MotionAction.SOUTH, scheme="xy", motion_name="South")
-MoveEastBig = MotionAction(MotionAction.EAST_BIG, scheme="xy", motion_name="East_Big")
-MoveWestBig = MotionAction(MotionAction.WEST_BIG, scheme="xy", motion_name="West_Big")
-MoveNorthBig = MotionAction(MotionAction.NORTH_BIG, scheme="xy", motion_name="North_Big")
-MoveSouthBig = MotionAction(MotionAction.SOUTH_BIG, scheme="xy", motion_name="South_Big")
+# MoveEastBig = MotionAction(MotionAction.EAST_BIG, scheme="xy", motion_name="East_Big")
+# MoveWestBig = MotionAction(MotionAction.WEST_BIG, scheme="xy", motion_name="West_Big")
+# MoveNorthBig = MotionAction(MotionAction.NORTH_BIG, scheme="xy", motion_name="North_Big")
+# MoveSouthBig = MotionAction(MotionAction.SOUTH_BIG, scheme="xy", motion_name="South_Big")
 MoveForward = MotionAction(MotionAction.FORWARD, scheme="vw", motion_name="Forward")
 MoveBackward = MotionAction(MotionAction.BACKWARD, scheme="vw", motion_name="Backward")
 MoveLeft = MotionAction(MotionAction.LEFT, scheme="vw", motion_name="TurnLeft")
 MoveRight = MotionAction(MotionAction.RIGHT, scheme="vw", motion_name="TurnRight")
-        
+
 class FindAction(Action):
     def __init__(self):
         super().__init__("find")
@@ -115,7 +113,7 @@ class FindAction(Action):
 Find = FindAction()
 
 if MOTION_SCHEME == "xy":
-    ALL_MOTION_ACTIONS = {MoveEast, MoveWest, MoveNorth, MoveSouth, MoveEastBig, MoveWestBig, MoveNorthBig, MoveSouthBig}
+    ALL_MOTION_ACTIONS = {MoveEast, MoveWest, MoveNorth, MoveSouth}
 elif MOTION_SCHEME == "vw":
     ALL_MOTION_ACTIONS = {MoveForward, MoveBackward, MoveLeft, MoveRight}
 else:

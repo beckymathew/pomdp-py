@@ -15,7 +15,7 @@ class GridMap:
             obstacle_poses (dict): Map from objid to (x,y); The object is
                                    supposed to be an obstacle.
             width (int): width of the grid map
-            length (int): length of the grid map 
+            length (int): length of the grid map
         """
         self.width = width
         self.length = length

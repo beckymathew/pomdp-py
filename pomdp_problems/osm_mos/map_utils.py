@@ -1,4 +1,35 @@
 import json
+import pickle
+import ast
+
+def get_lang_prior(pomdp_to_map_fp, lang_dict_fp):
+    """
+    Convert the lang prior dictionary to a format usable by pomdp
+    """
+
+    pomdp_to_map = {}
+    with open(pomdp_to_map_fp, 'r') as fin:
+        pomdp_to_map = json.load(fin)
+
+    lang_dict = {}
+    with open(lang_dict_fp, 'rb') as fin:
+        lang_dict = pickle.load(fin)
+
+    # https://stackoverflow.com/questions/483666/reverse-invert-a-dictionary-mapping
+    map_to_pomdp = {v: k for k, v in pomdp_to_map.items()}
+
+    outer_dict = {}
+    for objid in lang_dict.keys():
+        inner_dict = {}
+        for map_idx in lang_dict[objid]:
+            pomdp_tup = map_to_pomdp[map_idx   ]
+            pomdp_tup = ast.literal_eval(pomdp_tup)
+            inner_dict[pomdp_tup] = lang_dict[objid][map_idx]
+
+        outer_dict[objid] = inner_dict
+
+    return outer_dict
+
 
 def get_center_latlon(cell_idx, pomdp_to_map_fp, idx_to_cell_fp):
     """

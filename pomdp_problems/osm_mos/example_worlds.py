@@ -11,10 +11,10 @@ import random
 
 dorrance_2obj_0_1 = (
 """
-...................xx
+r..................xx
 ....................x
 ....................x
-..................r.x
+....................x
 ....................x
 ....................x
 ....................x
@@ -206,6 +206,17 @@ world3 = (
 .................
 .................
 """, "r")
+
+def create_worldstr(worldstr_fp):
+    """
+    Create a worldstring like world3 by reading in string from a file.
+    """
+
+    with open(worldstr_fp, "r") as fin:
+        data = fin.read()
+
+    # "r" is the robot character
+    return (data, "r")
 
 def random_world(width, length, num_obj, num_obstacles,
                  robot_char="r"):

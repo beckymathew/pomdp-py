@@ -63,4 +63,4 @@ class PolicyModel(pomdp_py.RolloutPolicy):
     """
 
     def rollout(self, state, history=None):
-        return random.sample(self.get_all_actions(history=history), 1)[0]
+        return random.sample(self.get_all_actions(state=state, history=history), 1)[0]

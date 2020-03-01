@@ -211,6 +211,12 @@ def belief_update(agent, real_action, real_observation, next_robot_state, planne
             agent.cur_belief.set_object_belief(objid, new_belief)
 
 
+target_colors = {
+    0: (217, 107, 118),  # red
+    1: (107, 118, 217),  # blue
+    2: (139, 69, 19)  # brown
+}
+
 ### Solve the problem with POUCT/POMCP planner ###
 ### This is the main online POMDP solver logic ###
 def solve(problem,
@@ -256,7 +262,9 @@ def solve(problem,
 
     robot_id = problem.agent.robot_id
     if visualize:
-        viz = MosViz(problem.env, controllable=False)  # controllable=False means no keyboard control.
+        # controllable=False means no keyboard control.
+        viz = MosViz(problem.env, controllable=False,
+                     object_colors=target_colors)
         if viz.on_init() == False:
             raise Exception("Environment failed to initialize")
         viz.update(robot_id,

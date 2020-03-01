@@ -30,7 +30,7 @@ def get_lang_prior(pomdp_to_map_fp, lang_dict_fp):
             pomdp_tup = ast.literal_eval(pomdp_tup)
             if map_idx in lang_dict[objid]: # observed in prior
                 observation = lang_dict[objid][map_idx]
-            inner_dict[pomdp_tup] = observation
+            inner_dict[pomdp_tup] = max(observation, 1e-6)
 
         # normalize values of dictionary -- prob distro sums to 1
         # https://stackoverflow.com/questions/16417916/normalizing-dictionary-values

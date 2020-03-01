@@ -28,7 +28,8 @@ def object_color(objid):
 class MosViz:
 
     def __init__(self, env,
-                 res=30, fps=30, controllable=False):
+                 res=30, fps=30, controllable=False,
+                 object_colors=None):
         self._env = env
 
         self._res = res
@@ -44,10 +45,11 @@ class MosViz:
         self._playtime = 0.0
 
         # Generate some colors, one per target object
-        colors = {}
-        for objid in env.target_objects:
-            colors[objid] = object_color(objid)
-        self._target_colors = colors        
+        if object_colors is None:
+            object_colors = {}
+            for objid in env.target_objects:
+                object_colors[objid] = object_color(objid)
+        self._target_colors = object_colors        
 
     def _make_gridworld_image(self, r):
         # Preparing 2d array

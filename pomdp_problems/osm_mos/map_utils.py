@@ -1,6 +1,8 @@
 import json
 import pickle
 import ast
+import math
+import operator
 
 def get_lang_prior(pomdp_to_map_fp, lang_dict_fp):
     """
@@ -21,10 +23,20 @@ def get_lang_prior(pomdp_to_map_fp, lang_dict_fp):
     outer_dict = {}
     for objid in lang_dict.keys():
         inner_dict = {}
-        for map_idx in lang_dict[objid]:
-            pomdp_tup = map_to_pomdp[map_idx   ]
+
+        for map_idx in map_to_pomdp:
+            observation = 1e-6 # default if there was no observation
+            pomdp_tup = map_to_pomdp[map_idx]
             pomdp_tup = ast.literal_eval(pomdp_tup)
-            inner_dict[pomdp_tup] = lang_dict[objid][map_idx]
+            if map_idx in lang_dict[objid]: # observed in prior
+                observation = lang_dict[objid][map_idx]
+            inner_dict[pomdp_tup] = observation
+
+        # normalize values of dictionary -- prob distro sums to 1
+        # https://stackoverflow.com/questions/16417916/normalizing-dictionary-values
+        factor=1.0 / math.fsum(inner_dict.values())
+        for k in inner_dict:
+            inner_dict[k] = inner_dict[k]*factor
 
         outer_dict[objid] = inner_dict
 

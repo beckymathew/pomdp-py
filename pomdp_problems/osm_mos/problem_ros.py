@@ -19,11 +19,8 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 
 # for conversions between pomdp and map frames
-pomdp_to_map_fp = "/home/becky/repo/spatial-lang/nyc_1obj/0_1_pomdp_cell_to_map_idx.json"
-idx_to_cell_fp = "/home/becky/repo/spatial-lang/nyc_1obj/idx_to_cell_nyc_1obj.json"
-
-# for timing finds
-start_time = 0
+pomdp_to_map_fp = "/home/becky/repo/spatial-lang/nyc_3obj/4_1_pomdp_cell_to_map_idx.json"
+idx_to_cell_fp = "/home/becky/repo/spatial-lang/nyc_3obj/idx_to_cell_nyc_3obj.json"
 
 class MosOOPOMDP(pomdp_py.OOPOMDP):
     """
@@ -140,13 +137,11 @@ def observation_callback(msg):
     for key, value in obs_dict.items():
         if value is None:
             obs_dict[key] = ObjectObservation.NULL
-        else:
+        # else:
             # convert lat/lon to pomdp grid coords
-            str_tuple = latlon_to_pomdp_cell(value[0], value[1], pomdp_to_map_fp, idx_to_cell_fp)
-            # print("str_tuple: ", str_tuple)
+            # str_tuple = latlon_to_pomdp_cell(value[0], value[1], pomdp_to_map_fp, idx_to_cell_fp)
             # obs_dict[key] = tuple(reversed(ast.literal_eval(str_tuple)))
-            obs_dict[key] = ast.literal_eval(str_tuple)
-    # print("after eval: ", obs_dict)
+            # obs_dict[key] = ast.literal_eval(value)
 
     observation = MosOOObservation(obs_dict)
     skydio_observation = observation
@@ -237,7 +232,6 @@ def solve(problem,
     """
     global drone_reached
     global skydio_observation
-    global start_time
 
     random_objid = random.sample(problem.env.target_objects, 1)[0]
     random_object_belief = problem.agent.belief.object_beliefs[random_objid]
@@ -282,16 +276,16 @@ def solve(problem,
         real_action = planner.plan(problem.agent)
         _time_used += time.time() - _start
         if _time_used > max_time:
+            print("Time used: ", _time_used)
+            print("Total reward: ", _total_reward)
+            print("Maximum time reached.")
             break  # no more time to update.
-        # TODO: Send action to Unity... in lat/lon!
+
         robot_pose = problem.env.state.object_states[robot_id].pose
         if real_action.name != "find":
             action_pose = real_action.motion
-            # next_coordinate = (robot_pose[0] + action_pose[0], robot_pose[1] + action_pose[1])
             next_coordinate = (robot_pose[0] + action_pose[0], robot_pose[1] + action_pose[1])
-            print("next_coordinate: ", next_coordinate)
             next_latlon = get_center_latlon(next_coordinate, pomdp_to_map_fp, idx_to_cell_fp)
-            print("next latlon: ", next_latlon)
 
             # Publish lat/lon pair to Unity sim on /gpose
             p = PoseStamped()
@@ -313,13 +307,14 @@ def solve(problem,
         if drone_reached:
             real_observation = skydio_observation
         if real_action.name == "find":
-            print("find time: ", time.time() - start_time)
+            print("find time: ", _time_used)
             real_observation = MosOOObservation({})
 
         pomdp_observation = \
             problem.env.provide_observation(problem.agent.observation_model, real_action)
-        print("actual obs: ", pomdp_observation)
-        print("skydio obs: ", real_observation)
+
+        print("pomdp observation: ", pomdp_observation)
+        print("skydio observation: ", real_observation)
 
         # Updates
         problem.agent.clear_history()  # truncate history
@@ -382,9 +377,8 @@ def solve(problem,
 def unittest():
     # random world
     # grid_map, robot_char = random_world(20, 20, 5, 20)
-    global start_time
 
-    grid_map, robot_char = create_worldstr("/home/becky/repo/spatial-lang/nyc_1obj/0_1_string.txt") # faunce_2obj_1_7
+    grid_map, robot_char = create_worldstr("/home/becky/repo/spatial-lang/nyc_3obj/4_1_string.txt") # faunce_2obj_1_7
     laserstr = make_laser_sensor(90, (1, 5), 0.5, False)
     proxstr = make_proximity_sensor(5, False)
     problem = MosOOPOMDP(robot_char,  # r is the robot character
@@ -392,22 +386,19 @@ def unittest():
                          epsilon=1.0, # observation model parameter
                          grid_map=grid_map,
                          sensors={robot_char: proxstr},
-                         prior="uniform",
+                         prior="random_idx.pkl",
                          agent_has_map=True)
 
     start_time = time.time()
 
     solve(problem,
-          max_depth=10,
-          discount_factor=0.99,
+          max_depth=20,
+          discount_factor=0.95,
           planning_time=1.,
           exploration_const=1000,
           visualize=True,
           max_time=120,
           max_steps=500)
-
-    # end_time = time.time()
-    # print("total time: ", end_time - start_time)
 
 if __name__ == "__main__":
     unittest()

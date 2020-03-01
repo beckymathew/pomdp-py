@@ -272,12 +272,18 @@ def solve(problem,
         # Termination check
         if set(problem.env.state.object_states[robot_id].objects_found)\
            == problem.env.target_objects:
+            print("Total time: ", _time_used)
+            print("Total reward: ", _total_reward)
             print("Done!")
             break
         if _find_actions_count >= len(problem.env.target_objects):
+            print("Total time: ", _time_used)
+            print("Total reward: ", _total_reward)
             print("FindAction limit reached.")
             break
         if _time_used > max_time:
+            print("Total time: ", _time_used)
+            print("Total reward: ", _total_reward)
             print("Maximum time reached.")
             break
 
@@ -286,18 +292,19 @@ def unittest():
     # random world
     # grid_map, robot_char = random_world(20, 20, 5, 20)
     grid_map, robot_char = dorrance_2obj_0_1
-    laserstr = make_laser_sensor(90, (1, 5), 0.5, False)
+    grid_map, robot_char = create_worldstr("/home/becky/repo/spatial-lang/nyc_2obj/0_1_string.txt") # faunce_2obj_1_7
+    # laserstr = make_laser_sensor(90, (1, 5), 0.5, False)
     proxstr = make_proximity_sensor(5, False)
     problem = MosOOPOMDP(robot_char,  # r is the robot character
                          sigma=0.01,  # observation model parameter
                          epsilon=1.0, # observation model parameter
                          grid_map=grid_map,
                          sensors={robot_char: proxstr},
-                         prior="informed",
+                         prior="uniform",
                          agent_has_map=True)
     solve(problem,
-          max_depth=10,
-          discount_factor=0.99,
+          max_depth=20,
+          discount_factor=0.95,
           planning_time=1.,
           exploration_const=1000,
           visualize=True,

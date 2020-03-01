@@ -48,10 +48,10 @@ class LookAction(Action):
 MOTION_SCHEME="xy"  # can be either xy or vw
 class MotionAction(Action):
     # scheme 1 (vx,vy,th)
-    EAST = (1, 0, 0)  # x is horizontal; x+ is right. y is vertical; y+ is down.
-    WEST = (-1, 0, math.pi)
-    NORTH = (0, -1, 3*math.pi/2)
-    SOUTH = (0, 1, math.pi/2)
+    EAST = (2, 0, 0)  # x is horizontal; x+ is right. y is vertical; y+ is down.
+    WEST = (-2, 0, math.pi)
+    NORTH = (0, -2, 3*math.pi/2)
+    SOUTH = (0, 2, math.pi/2)
 
     # allow the agent to take larger steps
     # EAST_BIG = (5, 0, 0)  # x is horizontal; x+ is right. y is vertical; y+ is down.

@@ -4,7 +4,7 @@
 # in the parent directory of multi_object_search:
 #
 #   python -m multi_object_search.env.visual
-# 
+#
 
 import pygame
 import cv2
@@ -35,10 +35,10 @@ class MosViz:
         self._res = res
         self._img = self._make_gridworld_image(res)
         self._last_observation = {}  # map from robot id to MosOOObservation
-        self._last_viz_observation = {}  # map from robot id to MosOOObservation        
+        self._last_viz_observation = {}  # map from robot id to MosOOObservation
         self._last_action = {}  # map from robot id to Action
         self._last_belief = {}  # map from robot id to OOBelief
-        
+
         self._controllable = controllable
         self._running = False
         self._fps = fps
@@ -49,7 +49,7 @@ class MosViz:
             object_colors = {}
             for objid in env.target_objects:
                 object_colors[objid] = object_color(objid)
-        self._target_colors = object_colors        
+        self._target_colors = object_colors
 
     def _make_gridworld_image(self, r):
         # Preparing 2d array
@@ -78,15 +78,15 @@ class MosViz:
                                   (40, 31, 3), -1)
                 elif arr2d[x,y] == 2:  # target
                     cv2.rectangle(img, (y*r, x*r), (y*r+r, x*r+r),
-                                  (255, 165, 0), -1)                    
+                                  (255, 165, 0), -1)
                 cv2.rectangle(img, (y*r, x*r), (y*r+r, x*r+r),
-                              (0, 0, 0), 1, 8)                    
+                              (0, 0, 0), 1, 8)
         return img
-    
+
     @property
     def img_width(self):
         return self._img.shape[0]
-    
+
     @property
     def img_height(self):
         return self._img.shape[1]
@@ -94,7 +94,7 @@ class MosViz:
     @property
     def last_observation(self):
         return self._last_observation
-    
+
     def update(self, robot_id, action, observation, viz_observation, belief):
         """
         Update the visualization after there is new real action and observation
@@ -109,7 +109,7 @@ class MosViz:
         self._last_observation[robot_id] = observation
         self._last_viz_observation[robot_id] = viz_observation
         self._last_belief[robot_id] = belief
-        
+
     @staticmethod
     def draw_robot(img, x, y, th, size, color=(255,12,12)):
         radius = int(round(size / 2))
@@ -153,11 +153,11 @@ class MosViz:
                         if (tx,ty) not in circle_drawn:
                             circle_drawn[(tx,ty)] = 0
                         circle_drawn[(tx,ty)] += 1
-                        
+
                         cv2.circle(img, (ty*r+radius,
                                          tx*r+radius), size//circle_drawn[(tx,ty)], color, thickness=-1)
                         last_val = hist[state]
-                        
+
                         count +=1
                         if last_val <= 0:
                             break
@@ -180,7 +180,7 @@ class MosViz:
     def on_event(self, event):
         # TODO: Keyboard control multiple robots
         robot_id = list(self._env.robot_ids)[0]  # Just pick the first one.
-        
+
         if event.type == pygame.QUIT:
             self._running = False
         elif event.type == pygame.KEYDOWN:
@@ -222,7 +222,7 @@ class MosViz:
                     z = self._env.sensors[robot_id].observe(robot_pose,
                                                             self._env.state)
                     self._last_observation[robot_id] = z
-                    self._last_viz_observation[robot_id] = z                    
+                    self._last_viz_observation[robot_id] = z
                     reward = self._env.state_transition(action, execute=True, robot_id=robot_id)
                 print("robot state: %s" % str(self._env.state.object_states[robot_id]))
                 print("     action: %s" % str(action.name))
@@ -233,7 +233,7 @@ class MosViz:
 
     def on_loop(self):
         self._playtime += self._clock.tick(self._fps) / 1000.0
-        
+
     def on_render(self):
         # self._display_surf.blit(self._background, (0, 0))
         self.render_env(self._display_surf)
@@ -246,15 +246,15 @@ class MosViz:
                                    (last_action_str, robot_id, rx, ry, rth*180/math.pi,
                                     str(self._env.state.object_states[robot_id]["objects_found"]),
                                     fps_text))
-        pygame.display.flip() 
- 
+        pygame.display.flip()
+
     def on_cleanup(self):
         pygame.quit()
- 
+
     def on_execute(self):
         if self.on_init() == False:
             self._running = False
- 
+
         while( self._running ):
             for event in pygame.event.get():
                 self.on_event(event)
@@ -264,7 +264,7 @@ class MosViz:
 
     def render_env(self, display_surf):
         # draw robot, a circle and a vector
-        img = np.copy(self._img)        
+        img = np.copy(self._img)
         for i, robot_id in enumerate(self._env.robot_ids):
             rx, ry, rth = self._env.state.pose(robot_id)
             r = self._res  # Not radius!
@@ -279,7 +279,7 @@ class MosViz:
             if last_observation is not None:
                 MosViz.draw_observation(img, last_observation,
                                         rx, ry, rth, r, r//8, color=(20, 20, 180))
-                
+
             MosViz.draw_robot(img, rx*r, ry*r, rth, r, color=(12, 255*(0.8*(i+1)), 12))
         pygame.surfarray.blit_array(display_surf, img)
 
@@ -304,5 +304,3 @@ def unittest():
 
 if __name__ == '__main__':
     unittest()
-        
-        

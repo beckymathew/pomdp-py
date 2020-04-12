@@ -19,8 +19,9 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 
 # for conversions between pomdp and map frames
-pomdp_to_map_fp = "/home/becky/repo/spatial-lang/nyc_3obj/4_1_pomdp_cell_to_map_idx.json"
-idx_to_cell_fp = "/home/becky/repo/spatial-lang/nyc_3obj/idx_to_cell_nyc_3obj.json"
+
+pomdp_to_map_fp = "/home/h2r/Documents/spatial-lang/spatial-lang/data/maps/nyc_3obj/4_1_pomdp_cell_to_map_idx.json"
+idx_to_cell_fp = "/home/h2r/Documents/spatial-lang/spatial-lang/data/maps/nyc_3obj/idx_to_cell_nyc_3obj.json"
 
 class MosOOPOMDP(pomdp_py.OOPOMDP):
     """
@@ -137,10 +138,11 @@ def observation_callback(msg):
     for key, value in obs_dict.items():
         if value is None:
             obs_dict[key] = ObjectObservation.NULL
-        # else:
+        else:
             # convert lat/lon to pomdp grid coords
-            # str_tuple = latlon_to_pomdp_cell(value[0], value[1], pomdp_to_map_fp, idx_to_cell_fp)
+            str_tuple = latlon_to_pomdp_cell(value[0], value[1], pomdp_to_map_fp, idx_to_cell_fp)
             # obs_dict[key] = tuple(reversed(ast.literal_eval(str_tuple)))
+            obs_dict[key] = ast.literal_eval(str_tuple)
             # obs_dict[key] = ast.literal_eval(value)
 
     observation = MosOOObservation(obs_dict)
@@ -386,7 +388,7 @@ def unittest():
     # random world
     # grid_map, robot_char = random_world(20, 20, 5, 20)
 
-    grid_map, robot_char = create_worldstr("/home/becky/repo/spatial-lang/nyc_3obj/4_1_string.txt") # faunce_2obj_1_7
+    grid_map, robot_char = create_worldstr("/home/h2r/Documents/spatial-lang/spatial-lang/data/maps/nyc_3obj/4_1_string.txt") # faunce_3obj_1_7
     laserstr = make_laser_sensor(90, (1, 5), 0.5, False)
     proxstr = make_proximity_sensor(5, False)
     problem = MosOOPOMDP(robot_char,  # r is the robot character
@@ -394,13 +396,11 @@ def unittest():
                          epsilon=1.0, # observation model parameter
                          grid_map=grid_map,
                          sensors={robot_char: proxstr},
-                         prior="random_idx.pkl",
+                         prior="informed",
                          agent_has_map=True)
 
-    start_time = time.time()
-
     solve(problem,
-          max_depth=20,
+          max_depth=30,
           discount_factor=0.95,
           planning_time=1.,
           exploration_const=1000,

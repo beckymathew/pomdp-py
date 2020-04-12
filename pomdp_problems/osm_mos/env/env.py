@@ -1,7 +1,10 @@
 """The Environment"""
 
 import pomdp_py
+import sys
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages') # in order to import cv2 under python3
 import cv2
+sys.path.append('/opt/ros/kinetic/lib/python2.7/dist-packages') # append back in order to import rospy
 import copy
 from ..models.transition_model import *
 from ..models.reward_model import *
@@ -158,7 +161,7 @@ def interpret(worldstr):
         raise ValueError("No initial robot pose!")
     if len(objects) == 0:
         raise ValueError("No object!")
-        
+
     # Parse sensors
     for line in sensorlines:
         if "," in line:
